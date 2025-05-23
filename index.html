@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Economic News Bot</title>
+    <style>
+        /* Сброс стилей и базовые настройки */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+        }
+
+        /* Основные стили для страницы */
+        body {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #000 25%, #ffd700 25%, #ffd700 50%, #000 50%, #000 75%, #ffd700 75%);
+            background-size: 40px 40px;
+            animation: stripeAnimation 2s linear infinite;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        @keyframes stripeAnimation {
+            0% { background-position: 0 0; }
+            100% { background-position: 40px 40px; }
+        }
+
+        /* Контейнер контента */
+        .content-container {
+            background-color: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 800px;
+            width: 100%;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            position: relative;
+            overflow: hidden;
+            transform: translateY(20px);
+            opacity: 0;
+            animation: fadeInUp 1s ease-out forwards;
+            border: 1px solid rgba(255, 215, 0, 0.3);
+        }
+
+        @keyframes fadeInUp {
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        /* Заголовок */
+        h1 {
+            color: #ffd700;
+            font-size: 2.5rem;
+            margin-bottom: 20px;
+            text-align: center;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+            position: relative;
+            padding-bottom: 15px;
+        }
+
+        h1::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100px;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, #ffd700, transparent);
+            border-radius: 3px;
+        }
+
+        /* Описание */
+        .description {
+            color: #fff;
+            font-size: 1.1rem;
+            line-height: 1.6;
+            margin-bottom: 30px;
+            text-align: center;
+            opacity: 0;
+            animation: fadeIn 1s ease-out 0.5s forwards;
+        }
+
+        @keyframes fadeIn {
+            to { opacity: 1; }
+        }
+
+        /* QR-код контейнер */
+        .qr-container {
+            display: flex;
+            justify-content: center;
+            margin: 30px 0;
+            opacity: 0;
+            animation: fadeIn 1s ease-out 0.8s forwards;
+        }
+
+        .qr-wrapper {
+            position: relative;
+            padding: 15px;
+            background: linear-gradient(135deg, #ffd700, #ffcc00);
+            border-radius: 15px;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .qr-wrapper:hover {
+            margin: 10px;
+        }
+
+        .qr-wrapper::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            background: linear-gradient(45deg, #ffd700, #000, #ffd700);
+            z-index: -1;
+            border-radius: 16px;
+            opacity: 0.7;
+        }
+
+        .qr-code {
+            width: 180px;
+            height: 180px;
+            background-color: #fff;
+            padding: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 10px;
+        }
+
+        /* Контактная информация */
+        .contact-info {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+            margin-top: 30px;
+            opacity: 0;
+            animation: fadeIn 1s ease-out 1.1s forwards;
+        }
+
+        .contact-item {
+            display: flex;
+            align-items: center;
+            color: #fff;
+            font-size: 1rem;
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        .contact-item:hover {
+            color: #ffd700;
+        }
+
+        .contact-item i {
+            margin-right: 10px;
+            color: #ffd700;
+            font-size: 1.2rem;
+        }
+
+        /* Анимированные фигуры (дождь) */
+        .shapes-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: -1;
+            overflow: hidden;
+        }
+
+        .shape {
+            position: absolute;
+            opacity: 0.7;
+            animation: fall linear infinite;
+        }
+
+        @keyframes fall {
+            to {
+                transform: translateY(100vh);
+            }
+        }
+
+        /* Адаптивные стили */
+        @media (max-width: 768px) {
+            .content-container {
+                padding: 30px 20px;
+                margin: 20px;
+            }
+
+            h1 {
+                font-size: 2rem;
+            }
+
+            .description {
+                font-size: 1rem;
+            }
+
+            .qr-code {
+                width: 150px;
+                height: 150px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            h1 {
+                font-size: 1.8rem;
+            }
+
+            .content-container {
+                padding: 25px 15px;
+            }
+
+            .qr-code {
+                width: 130px;
+                height: 130px;
+            }
+        }
+    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+    <!-- Контейнер для анимированных фигур -->
+    <div class="shapes-container" id="shapesContainer"></div>
+
+    <!-- Основной контент -->
+    <div class="content-container">
+        <h1>Economic News Bot</h1>
+        
+        <p class="description">
+            Удобный бот, автоматизирующий сбор и краткое изложение экономических новостей для подписчиков.
+        </p>
+        
+        <div class="qr-container">
+            <div class="qr-wrapper">
+                <div class="qr-code">
+                    <!-- Замените этот div на ваш реальный QR-код -->
+                    <div style="color: #000; text-align: center; font-size: 0.8rem;">
+                        [Ваш QR-код здесь]<br>
+                        Ссылка на проект
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="contact-info">
+            <a href="mailto:contact@example.com" class="contact-item" target="_blank">
+                <i class="fas fa-envelope"></i> contact@example.com
+            </a>
+            <a href="tel:+1234567890" class="contact-item">
+                <i class="fas fa-phone"></i> +1 (234) 567-890
+            </a>
+            <a href="https://example.com" class="contact-item" target="_blank">
+                <i class="fas fa-globe"></i> example.com
+            </a>
+        </div>
+    </div>
+
+    <script>
+        // Создание анимированных фигур (дождь)
+        document.addEventListener('DOMContentLoaded', function() {
+            const container = document.getElementById('shapesContainer');
+            const shapes = ['circle', 'square', 'triangle', 'diamond'];
+            const colors = ['#ffd700', '#ffffff', '#ffd70099', '#ffffff99'];
+            
+            function createShape() {
+                const shape = document.createElement('div');
+                shape.className = 'shape';
+                
+                // Случайный выбор типа фигуры
+                const shapeType = shapes[Math.floor(Math.random() * shapes.length)];
+                const size = Math.random() * 20 + 10;
+                const color = colors[Math.floor(Math.random() * colors.length)];
+                
+                // Позиционирование
+                const left = Math.random() * 100;
+                shape.style.left = `${left}vw`;
+                shape.style.top = `-50px`;
+                shape.style.width = `${size}px`;
+                shape.style.height = `${size}px`;
+                
+                // Стилизация в зависимости от типа фигуры
+                switch(shapeType) {
+                    case 'circle':
+                        shape.style.borderRadius = '50%';
+                        shape.style.backgroundColor = color;
+                        break;
+                    case 'square':
+                        shape.style.backgroundColor = color;
+                        shape.style.transform = 'rotate(' + (Math.random() * 45) + 'deg)';
+                        break;
+                    case 'triangle':
+                        shape.style.width = '0';
+                        shape.style.height = '0';
+                        shape.style.borderLeft = `${size/2}px solid transparent`;
+                        shape.style.borderRight = `${size/2}px solid transparent`;
+                        shape.style.borderBottom = `${size}px solid ${color}`;
+                        shape.style.backgroundColor = 'transparent';
+                        break;
+                    case 'diamond':
+                        shape.style.transform = 'rotate(45deg)';
+                        shape.style.backgroundColor = color;
+                        break;
+                }
+                
+                // Анимация
+                const duration = Math.random() * 10 + 5;
+                shape.style.animationDuration = `${duration}s`;
+                
+                container.appendChild(shape);
+                
+                // Удаление фигуры после завершения анимации
+                setTimeout(() => {
+                    shape.remove();
+                }, duration * 1000);
+            }
+            
+            // Создаем несколько фигур сразу
+            for (let i = 0; i < 20; i++) {
+                setTimeout(createShape, i * 300);
+            }
+            
+            // Продолжаем создавать фигуры с интервалом
+            setInterval(createShape, 500);
+        });
+    </script>
+</body>
+</html>
