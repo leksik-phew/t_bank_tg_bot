@@ -102,9 +102,7 @@ class MultiChannelNewsCollector:
         """Закрытие соединения с БД"""
         self.conn.close()
 
-# Пример использования
 if __name__ == '__main__':
-    # Список каналов (примеры)
     CHANNELS = [
         'finansist_busines',
         'AlfaBank',
