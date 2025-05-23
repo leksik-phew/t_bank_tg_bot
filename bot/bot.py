@@ -209,15 +209,24 @@ async def send_news_summary(context: ContextTypes.DEFAULT_TYPE) -> None:
 
 
 def get_news_summary() -> str:
-    # TODO: Реализовать сбор новостей из Telegram-каналов и их суммаризацию
-    # Импорт модели
-    # Запрос контента от модели
-    # Вывод в соо
+    from transformers import GPT2Tokenizer, T5ForConditionalGeneration 
+    tokenizer = GPT2Tokenizer.from_pretrained('RussianNLP/FRED-T5-Summarizer',eos_token='</s>')
+    model = T5ForConditionalGeneration.from_pretrained('RussianNLP/FRED-T5-Summarizer')
+    device='cpu'
+    model.to(device)
+
+    promt = ""
+    input_text=promt 
+    input_ids=torch.tensor([tokenizer.encode(input_text)]).to(device)
+    outputs=model.generate(input_ids,eos_token_id=tokenizer.eos_token_id,
+                        num_beams=5,
+                        min_new_tokens=17,
+                        max_new_tokens=200,
+                        do_sample=True,
+                        no_repeat_ngram_size=4,
+                        top_p=0.9)
     return (
-        "Экономические новости:\n"
-        "1. Заглушка: Рост ВВП США на 2.5% в Q1 2025.\n"
-        "2. Заглушка: Цены на нефть Brent достигли $80 за баррель.\n"
-        "3. Заглушка: ЕЦБ сохранил ставку на уровне 3.5%."
+        tokenizer.decode(outputs[0][1:])
     )
 
 
