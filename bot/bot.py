@@ -360,14 +360,28 @@ def main() -> None:
     application = (
         Application.builder()
         .token(BOT_TOKEN)
-        .job_queue(JobQueue())  # Явная инициализация
         .build()
     )
 
-    application.job_queue.run_repeating(
+    # Создаем отдельный JobQueue для обновления базы данных
+    db_job_queue = JobQueue()
+    db_job_queue.set_application(application)  # Привязываем JobQueue к приложению
+
+    # Запускаем задачу обновления базы данных в отдельном JobQueue
+    db_job_queue.run_repeating(
         callback=lambda context: update_db(),
-        interval=600,
+        interval=600,  # 10 минут
         first=600
+    )
+
+    # Запускаем JobQueue для обновления базы данных
+    db_job_queue.start()
+
+    # Основной JobQueue для остальных задач (например, отправки новостей)
+    application.job_queue.run_repeating(
+        callback=lambda context: None,  # Пустая задача, если нужно
+        interval=3600,  # Пример интервала
+        first=3600
     )
 
     # Регистрация обработчиков
