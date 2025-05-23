@@ -104,7 +104,7 @@ async def handle_periodicity_choice(update: Update, context: ContextTypes.DEFAUL
 
         # Удаление предыдущей задачи, если она была
         if chat_id in context.chat_data:
-            context.chat_data[chat_id].cancel()
+            context.chat_data[chat_id].schedule_removal()
 
         # Запуск новой задачи
         job = context.job_queue.run_repeating(
@@ -168,7 +168,7 @@ async def handle_custom_periodicity(update: Update, context: ContextTypes.DEFAUL
 
     # Удаление предыдущей задачи, если она была
     if chat_id in context.chat_data:
-        context.chat_data[chat_id].cancel()
+        context.chat_data[chat_id].schedule_removal()
 
     # Запуск новой задачи
     job = context.job_queue.run_repeating(
