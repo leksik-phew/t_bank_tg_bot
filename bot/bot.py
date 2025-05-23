@@ -210,8 +210,6 @@ async def send_news_summary(context: ContextTypes.DEFAULT_TYPE) -> None:
     except Exception as e:
         logger.error(f"Ошибка отправки сообщения в чат {chat_id}: {e}")
 
-# Заглушка для функции сбора и суммаризации новостей
-
 
 def get_news_summary() -> str:
     from transformers import GPT2Tokenizer, T5ForConditionalGeneration
