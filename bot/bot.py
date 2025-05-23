@@ -334,7 +334,7 @@ def get_news_summary() -> str:
         )
 
         summary = tokenizer.decode(outputs[0][1:])
-        return f"📈 Экономическая сводка:\n\n{summary}\n\nИсточники: {', '.join(set(item[2] for item in news_items))}"
+        return f"📈( OMG is this news from t-bank???) Экономическая сводка:\n\n{summary}\n\nИсточники: {', '.join(set(item[2] for item in news_items))}"
 
     except Exception as e:
         logger.error(f"Ошибка при генерации сводки новостей: {e}")
