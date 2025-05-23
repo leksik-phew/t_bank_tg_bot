@@ -205,6 +205,9 @@ async def send_news_summary(context: ContextTypes.DEFAULT_TYPE) -> None:
 
 def get_news_summary() -> str:
     # TODO: Реализовать сбор новостей из Telegram-каналов и их суммаризацию
+    # Импорт модели
+    # Запрос контента от модели
+    # Вывод в соо
     return (
         "Экономические новости:\n"
         "1. Заглушка: Рост ВВП США на 2.5% в Q1 2025.\n"
