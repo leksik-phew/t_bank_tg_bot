@@ -5,6 +5,7 @@ from telegram.ext import JobQueue
 from dotenv import load_dotenv
 import os
 import asyncio
+import torch
 
 import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -209,30 +210,63 @@ async def send_news_summary(context: ContextTypes.DEFAULT_TYPE) -> None:
 
 
 def get_news_summary() -> str:
-    from transformers import GPT2Tokenizer, T5ForConditionalGeneration 
-    tokenizer = GPT2Tokenizer.from_pretrained('RussianNLP/FRED-T5-Summarizer',eos_token='</s>')
-    model = T5ForConditionalGeneration.from_pretrained('RussianNLP/FRED-T5-Summarizer')
-    device='cpu'
-    model.to(device)
-
-
-    # Получить данные из дб
-    # Выслать их в промт
+    from transformers import GPT2Tokenizer, T5ForConditionalGeneration
+    import torch
+    import sqlite3
+    from datetime import datetime, timedelta
     
-
-    promt = ""
-    input_text=promt 
-    input_ids=torch.tensor([tokenizer.encode(input_text)]).to(device)
-    outputs=model.generate(input_ids,eos_token_id=tokenizer.eos_token_id,
-                        num_beams=5,
-                        min_new_tokens=17,
-                        max_new_tokens=200,
-                        do_sample=True,
-                        no_repeat_ngram_size=4,
-                        top_p=0.9)
-    return (
-        tokenizer.decode(outputs[0][1:])
-    )
+    # Initialize the summarization model
+    tokenizer = GPT2Tokenizer.from_pretrained('RussianNLP/FRED-T5-Summarizer', eos_token='</s>')
+    model = T5ForConditionalGeneration.from_pretrained('RussianNLP/FRED-T5-Summarizer')
+    device = 'cpu'
+    model.to(device)
+    
+    # Connect to the database
+    db_path = os.path.join(os.path.dirname(__file__), '..', 'database', 'bee.db')
+    try:
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        
+        # Get news from the last 24 hours
+        yesterday = datetime.now() - timedelta(days=1)
+        cursor.execute("""
+            SELECT title, content, channel 
+            FROM news 
+            WHERE published_at >= ? 
+            ORDER BY published_at DESC
+            LIMIT 10
+        """, (yesterday.strftime('%Y-%m-%d %H:%M:%S'),))
+        
+        news_items = cursor.fetchall()
+        conn.close()
+        
+        if not news_items:
+            return "На сегодня нет свежих экономических новостей."
+            
+        # Prepare the prompt for summarization
+        prompt = "Суммаризируй следующие экономические новости:\n\n"
+        for title, content, source in news_items:
+            prompt += f"Заголовок: {title}\nИсточник: {source}\nТекст: {content[:500]}\n\n"
+        
+        # Generate the summary
+        input_ids = torch.tensor([tokenizer.encode(prompt)]).to(device)
+        outputs = model.generate(
+            input_ids,
+            eos_token_id=tokenizer.eos_token_id,
+            num_beams=5,
+            min_new_tokens=50,
+            max_new_tokens=500,
+            do_sample=True,
+            no_repeat_ngram_size=4,
+            top_p=0.9
+        )
+        
+        summary = tokenizer.decode(outputs[0][1:])
+        return f"📈 Экономическая сводка:\n\n{summary}\n\nИсточники: {', '.join(set(item[2] for item in news_items))}"
+        
+    except Exception as e:
+        logger.error(f"Ошибка при генерации сводки новостей: {e}")
+        return "Произошла ошибка при подготовке экономической сводки. Пожалуйста, попробуйте позже."
 
 
 def main() -> None:

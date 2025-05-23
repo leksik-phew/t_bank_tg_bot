@@ -6,4 +6,3 @@ dotenv
 python-telegram-bot
 torch
 transformers
-"python-telegram-bot[job-queue]"
