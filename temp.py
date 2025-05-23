@@ -1,4 +1,4 @@
-import torch
+"""import torch
 from transformers import GPT2Tokenizer, T5ForConditionalGeneration 
 tokenizer = GPT2Tokenizer.from_pretrained('RussianNLP/FRED-T5-Summarizer',eos_token='</s>')
 model = T5ForConditionalGeneration.from_pretrained('RussianNLP/FRED-T5-Summarizer')
@@ -16,4 +16,7 @@ outputs=model.generate(input_ids,eos_token_id=tokenizer.eos_token_id,
                     top_p=0.9)
 print(tokenizer.decode(outputs[0][1:]))
 
-# print result: Старик Иван живёт размеренной жизнью в деревне, выращивая овощи и находя радость в простых вещах.
+# print result: Старик Иван живёт размеренной жизнью в деревне, выращивая овощи и находя радость в простых вещах."""
+
+from database.creator import update_db
+update_db()
