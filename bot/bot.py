@@ -219,13 +219,11 @@ def get_news_summary() -> str:
     import sqlite3
     from datetime import datetime, timedelta
     
-    # Initialize the summarization model
     tokenizer = GPT2Tokenizer.from_pretrained('RussianNLP/FRED-T5-Summarizer', eos_token='</s>')
     model = T5ForConditionalGeneration.from_pretrained('RussianNLP/FRED-T5-Summarizer')
     device = 'cpu'
     model.to(device)
     
-    # Connect to the database
     db_path = "database/bee.db"
     try:
         conn = sqlite3.connect(db_path)
@@ -234,14 +232,13 @@ def get_news_summary() -> str:
 
         cursor = conn.cursor()
         
-        # Get news from the last 24 hours
         yesterday = datetime.now() - timedelta(days=1)
         cursor.execute("""
             SELECT title, content, channel 
             FROM news 
             WHERE pub_date >= ? 
             ORDER BY pub_date DESC
-            LIMIT 10
+            LIMIT 7
         """, (yesterday.strftime('%Y-%m-%d %H:%M:%S'),))
         
         news_items = cursor.fetchall()
@@ -250,12 +247,10 @@ def get_news_summary() -> str:
         if not news_items:
             return "На сегодня нет свежих экономических новостей."
             
-        # Prepare the prompt for summarization
         prompt = "Суммаризируй следующие экономические новости:\n\n"
         for title, content, source in news_items:
             prompt += f"Заголовок: {title}\nИсточник: {source}\nТекст: {content[:500]}\n\n"
         
-        # Generate the summary
         input_ids = torch.tensor([tokenizer.encode(prompt)]).to(device)
         outputs = model.generate(
             input_ids,
