@@ -367,11 +367,19 @@ def main() -> None:
     db_job_queue = JobQueue()
     db_job_queue.set_application(application)  # Привязываем JobQueue к приложению
 
-    # Запускаем задачу обновления базы данных в отдельном JobQueue
+    # Запускаем однократное обновление базы данных при старте
+    db_job_queue.run_once(
+        callback=lambda context: update_db(),
+        when=0,  # Выполнить немедленно
+        name="initial_db_update"
+    )
+
+    # Запускаем задачу периодического обновления базы данных
     db_job_queue.run_repeating(
         callback=lambda context: update_db(),
         interval=600,  # 10 минут
-        first=600
+        first=600,  # Первое выполнение через 10 минут после старта
+        name="periodic_db_update"
     )
 
     # Запускаем JobQueue для обновления базы данных
