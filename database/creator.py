@@ -77,9 +77,8 @@ class MultiChannelNewsCollector:
         return (text.replace('<br/>', '\n').replace('<br />', '\n').replace(' ', ' ').strip())
 
     def _extract_views(self, item) -> int:
-        description = item.get('description', '')
-        if 'Views:' in description:
-            return int(description.split('Views:')[-1].split()[0])
+        if hasattr(item, 'media_statistics'):
+            return int(item.media_statistics.get('views', 0))
         return 0
 
     def clear_news(self):

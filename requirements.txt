@@ -4,3 +4,5 @@ typing
 datetime
 dotenv
 python-telegram-bot
+torch
+transformers
