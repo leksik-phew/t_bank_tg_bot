@@ -2,3 +2,5 @@ requests
 feedparser
 typing
 datetime
+telegram
+dotenv
