@@ -215,6 +215,11 @@ def get_news_summary() -> str:
     device='cpu'
     model.to(device)
 
+
+    # Получить данные из дб
+    # Выслать их в промт
+    
+
     promt = ""
     input_text=promt 
     input_ids=torch.tensor([tokenizer.encode(input_text)]).to(device)
