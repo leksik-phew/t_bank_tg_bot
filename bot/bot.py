@@ -9,6 +9,10 @@ import torch
 
 import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+path = sys.path[-1]
+print(path)
+
 from database.creator import update_db
 
 # Загрузка переменных окружения
@@ -222,9 +226,12 @@ def get_news_summary() -> str:
     model.to(device)
     
     # Connect to the database
-    db_path = os.path.join(os.path.dirname(__file__), '..', 'database', 'bee.db')
+    db_path = "database/bee.db"
     try:
         conn = sqlite3.connect(db_path)
+
+        print(conn)
+
         cursor = conn.cursor()
         
         # Get news from the last 24 hours
@@ -232,8 +239,8 @@ def get_news_summary() -> str:
         cursor.execute("""
             SELECT title, content, channel 
             FROM news 
-            WHERE published_at >= ? 
-            ORDER BY published_at DESC
+            WHERE pub_date >= ? 
+            ORDER BY pub_date DESC
             LIMIT 10
         """, (yesterday.strftime('%Y-%m-%d %H:%M:%S'),))
         
