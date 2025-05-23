@@ -1,9 +1,14 @@
 import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, MessageHandler, filters, ContextTypes
+from telegram.ext import JobQueue
 from dotenv import load_dotenv
 import os
 import asyncio
+
+import sys
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from database.creator import update_db
 
 # Загрузка переменных окружения
 load_dotenv()
@@ -223,7 +228,18 @@ def main() -> None:
         return
 
     # Инициализация бота
-    application = Application.builder().token(BOT_TOKEN).build()
+    application = (
+        Application.builder()
+        .token(BOT_TOKEN)
+        .job_queue(JobQueue())  # Явная инициализация
+        .build()
+    )
+
+    application.job_queue.run_repeating(
+        callback=lambda context: update_db(),
+        interval=600,
+        first=600
+    )
 
     # Регистрация обработчиков
     application.add_handler(CommandHandler("start", start))
