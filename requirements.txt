@@ -2,5 +2,5 @@ requests
 feedparser
 typing
 datetime
-telegram
 dotenv
+python-telegram-bot
