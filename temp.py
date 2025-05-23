@@ -1,22 +1,55 @@
-import torch
 from transformers import GPT2Tokenizer, T5ForConditionalGeneration
-tokenizer = GPT2Tokenizer.from_pretrained('RussianNLP/FRED-T5-Summarizer',eos_token='</s>')
+import torch
+import sqlite3
+from datetime import datetime, timedelta
+
+tokenizer = GPT2Tokenizer.from_pretrained('RussianNLP/FRED-T5-Summarizer', eos_token='</s>')
 model = T5ForConditionalGeneration.from_pretrained('RussianNLP/FRED-T5-Summarizer')
-device='cpu'
+device = 'cpu'
 model.to(device)
 
-input_text='<LM> Сократи текст.\n В деревне, затерянной среди зелёных холмов, жил старик по имени Иван. Его жизнь протекала медленно и размеренно. Каждое утро Иван выходил на поля, чтобы заботиться о своём скромном участке земли. Он выращивал картофель и морковь, которые были его главным источником пищи. Вечера старик проводил у камина, читая книги и вспоминая молодость. Жизнь в деревне была тяжёлая, но Иван находил в ней простые радости.'
-input_ids=torch.tensor([tokenizer.encode(input_text)]).to(device)
-outputs=model.generate(input_ids,eos_token_id=tokenizer.eos_token_id,
-                    num_beams=5,
-                    min_new_tokens=17,
-                    max_new_tokens=200,
-                    do_sample=True,
-                    no_repeat_ngram_size=4,
-                    top_p=0.9)
-print(tokenizer.decode(outputs[0][1:]))
+db_path = "database/bee.db"
+try:
+    conn = sqlite3.connect(db_path)
 
-# print result: Старик Иван живёт размеренной жизнью в деревне, выращивая овощи и находя радость в простых вещах.
+    print(conn)
 
-"""from database.creator import update_db
-update_db()"""
+    cursor = conn.cursor()
+    
+    yesterday = datetime.now() - timedelta(days=1)
+    cursor.execute("""
+        SELECT title, content, channel 
+        FROM news 
+        WHERE pub_date >= ? 
+        ORDER BY pub_date DESC
+        LIMIT 7
+    """, (yesterday.strftime('%Y-%m-%d %H:%M:%S'),))
+    
+    news_items = cursor.fetchall()
+    conn.close()
+    
+    if not news_items:
+        print("На сегодня нет свежих экономических новостей.")
+        
+    prompt = "Суммаризируй следующие экономические новости:\n\n"
+    for title, content, source in news_items:
+        prompt += f"Заголовок: {title}\nИсточник: {source}\nТекст: {content[:500]}\n\n"
+    
+    input_ids = torch.tensor([tokenizer.encode(prompt)]).to(device)
+    outputs = model.generate(
+        input_ids,
+        eos_token_id=tokenizer.eos_token_id,
+        num_beams=5,
+        min_new_tokens=50,
+        max_new_tokens=500,
+        do_sample=True,
+        no_repeat_ngram_size=4,
+        top_p=0.9
+    )
+    
+    summary = tokenizer.decode(outputs[0][1:])
+    print( f"📈 Экономическая сводка:\n\n{summary}\n\nИсточники: {', '.join(set(item[2] for item in news_items))}" )
+    
+except Exception as e:
+    print(f"Ошибка при генерации сводки новостей: {e}")
+    print( "Произошла ошибка при подготовке экономической сводки. Пожалуйста, попробуйте позже." )

@@ -1,4 +1,4 @@
-from database.creator import update_db
+
 import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, MessageHandler, filters, ContextTypes
@@ -12,6 +12,7 @@ import sys
 from uuid import uuid4
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from database.creator import update_db
 
 path = sys.path[-1]
 print(path)
