@@ -259,7 +259,7 @@ async def handle_custom_periodicity(update: Update, context: ContextTypes.DEFAUL
     # Запуск новой задачи
     job = context.job_queue.run_repeating(
         send_news_summary,
-        interval=minutes * 60,
+        interval=minutes * 60 - 20,
         first=0,
         data=chat_id
     )
