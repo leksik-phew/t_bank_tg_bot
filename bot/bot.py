@@ -296,21 +296,26 @@ async def send_news_summary(context: ContextTypes.DEFAULT_TYPE) -> None:
 # Функция генерации новостной сводки
 
 async def get_summary(prompt) -> str:
-    input_ids = torch.tensor([tokenizer.encode(prompt)]).to(device)
-    outputs = model.generate(
-        input_ids,
-        eos_token_id=tokenizer.eos_token_id,
-        num_beams=5,
-        min_new_tokens=50,
-        max_new_tokens=1000,  # Увеличен лимит для списка
-        do_sample=True,
-        no_repeat_ngram_size=4,
-        top_p=0.9
-    )
+    def _generate():
+        input_ids = tokenizer.encode(prompt, return_tensors="pt").to(device)
+        outputs = model.generate(
+            input_ids,
+            max_new_tokens=1000,
+            min_new_tokens=50,
+            num_beams=5,
+            early_stopping=True,
+            no_repeat_ngram_size=4,
+            top_p=0.9,
+            do_sample=True
+        )
+        return tokenizer.decode(outputs[0], skip_special_tokens=True)
 
-    summary = tokenizer.decode(outputs[0][1:], skip_special_tokens=True)
-    print(summary)
-    return summary
+    try:
+        # Запускаем генерацию в отдельном потоке
+        return await asyncio.to_thread(_generate)
+    except Exception as e:
+        logger.error(f"Ошибка генерации: {e}")
+        return "Не удалось сгенерировать сводку"
 
 
 def get_news_summary() -> str:
