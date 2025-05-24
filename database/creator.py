@@ -5,14 +5,16 @@ import requests
 from typing import List
 
 CHANNELS = [
-    'auantonov',
-    'AlfaBank',
-    'tbank',
-    'fpibank',
+    'multievan',
+    'banki_oil',
+    'biznes',
     'banki_economy',
-    'bankrollo',
-    'economica',
-    'prostoecon'
+    'suverenka',
+    'cb_economics',
+    'prostoecon',
+    'retail_money',
+    'strahovatelisfr',
+    'bankglav'
 ]
 
 class MultiChannelNewsCollector:
