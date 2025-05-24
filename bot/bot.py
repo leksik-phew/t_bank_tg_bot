@@ -350,6 +350,34 @@ def get_news_summary() -> str:
         return "Произошла ошибка при подготовке экономической сводки. Пожалуйста, попробуйте позже."
 
 
+async def stop(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    chat_id = update.effective_chat.id
+    chat_type = update.effective_chat.type
+    logger.info(f"Команда /stop вызвана в чате {chat_id} (тип: {chat_type})")
+
+    if is_group_or_channel(update):
+        if not await check_bot_permissions(update, context):
+            return
+
+    # Проверяем, есть ли расписание для этого чата
+    if chat_id not in chat_schedules:
+        await update.message.reply_text("В этом чате не настроена отправка новостей.")
+        logger.info(f"Попытка остановки в чате {chat_id}, но расписание не найдено")
+        return
+
+    # Удаляем задачу отправки новостей для этого чата
+    if chat_id in context.chat_data:
+        context.chat_data[chat_id].schedule_removal()
+        del context.chat_data[chat_id]
+        logger.info(f"Задача отправки новостей для чата {chat_id} удалена")
+
+    # Удаляем расписание из chat_schedules
+    del chat_schedules[chat_id]
+    logger.info(f"Расписание для чата {chat_id} удалено")
+
+    await update.message.reply_text("Отправка новостных сводок в этом чате остановлена. Используйте /set для настройки нового расписания.")
+
+
 def main() -> None:
     # Проверка наличия токена
     if not BOT_TOKEN:
@@ -364,6 +392,7 @@ def main() -> None:
     )
 
     # Создаем отдельный JobQueue для обновления базы данных
+    global db_job_queue  # Делаем db_job_queue глобальной для возможного использования
     db_job_queue = JobQueue()
     db_job_queue.set_application(application)  # Привязываем JobQueue к приложению
 
@@ -385,17 +414,12 @@ def main() -> None:
     # Запускаем JobQueue для обновления базы данных
     db_job_queue.start()
 
-    # Основной JobQueue для остальных задач (например, отправки новостей)
-    application.job_queue.run_repeating(
-        callback=lambda context: None,  # Пустая задача, если нужно
-        interval=3600,  # Пример интервала
-        first=3600
-    )
 
     # Регистрация обработчиков
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("help", help_command))
     application.add_handler(CommandHandler("set", set_schedule))
+    application.add_handler(CommandHandler("stop", stop))  # Добавляем обработчик для /stop
     application.add_handler(CallbackQueryHandler(handle_periodicity_choice))
     application.add_handler(MessageHandler(
         filters.Regex(r'^\d+$'), handle_custom_periodicity))
@@ -403,6 +427,10 @@ def main() -> None:
     # Запуск бота
     logger.info("----------------------- Бот запущен -----------------------")
     application.run_polling(allowed_updates=Update.ALL_TYPES)
+
+
+if __name__ == '__main__':
+    main()
 
 
 if __name__ == '__main__':
