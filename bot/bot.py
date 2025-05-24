@@ -295,7 +295,7 @@ async def handle_custom_periodicity(update: Update, context: ContextTypes.DEFAUL
 
     job = context.job_queue.run_repeating(
         send_news_summary,
-        interval=minutes * 60 - 30,
+        interval=minutes * 60,
         first=0,
         data=chat_id
     )
@@ -390,7 +390,7 @@ def get_news_summary(chat_id: int) -> str:
 
         # Формируем промпт для суммаризации
         prompt = (
-            "Суммаризируй следующие экономические новости в виде нумерованного списка."
+            "Суммаризируй следующие экономические новости"
         )
         for news_id, title, content, source in fresh_news:
             prompt += f"Заголовок: {title}\nИсточник: {source}\nТекст: {content[:500]}\n\n"
