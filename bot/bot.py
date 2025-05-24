@@ -18,10 +18,8 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from database.creator import update_db
 
 # Инициализация модели T5 для суммаризации новостей
-tokenizer = GPT2Tokenizer.from_pretrained(
-    'RussianNLP/FRED-T5-Summarizer', eos_token='</s>')
-model = T5ForConditionalGeneration.from_pretrained(
-    'RussianNLP/FRED-T5-Summarizer')
+tokenizer = GPT2Tokenizer.from_pretrained('RussianNLP/FRED-T5-Summarizer', eos_token='</s>')
+model = T5ForConditionalGeneration.from_pretrained('RussianNLP/FRED-T5-Summarizer')
 device = 'cpu'
 model.to(device)
 
@@ -43,7 +41,6 @@ chat_schedules = {}
 STATE_WAITING_MINUTES = "waiting_minutes"
 STATE_WAITING_DAYS = "waiting_days"
 
-
 def init_processed_news_table():
     """Инициализирует таблицу processed_news в базе данных."""
     db_path = "database/bee.db"
@@ -63,7 +60,6 @@ def init_processed_news_table():
     finally:
         conn.close()
 
-
 def get_periodicity_keyboard() -> InlineKeyboardMarkup:
     """Создает инлайн-клавиатуру для выбора периодичности отправки новостей."""
     keyboard = [
@@ -73,19 +69,15 @@ def get_periodicity_keyboard() -> InlineKeyboardMarkup:
         ],
         [InlineKeyboardButton("Еженедельно", callback_data="period_weekly")],
         [
-            InlineKeyboardButton(
-                "Свои минуты", callback_data="period_custom_minutes"),
-            InlineKeyboardButton(
-                "Свои дни", callback_data="period_custom_days"),
+            InlineKeyboardButton("Свои минуты", callback_data="period_custom_minutes"),
+            InlineKeyboardButton("Свои дни", callback_data="period_custom_days"),
         ],
     ]
     return InlineKeyboardMarkup(keyboard)
 
-
 def is_group_or_channel(update: Update) -> bool:
     """Проверяет, является ли чат группой или каналом."""
     return update.effective_chat.type in ["group", "supergroup", "channel"]
-
 
 async def check_bot_permissions(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
     """Проверяет права бота и пользователя в группе или канале."""
@@ -121,19 +113,16 @@ async def check_bot_permissions(update: Update, context: ContextTypes.DEFAULT_TY
                 await update.message.reply_text(
                     "Ошибка: Только администраторы группы могут использовать команды бота."
                 )
-                logger.warning(
-                    f"Пользователь {user_id} не является администратором в чате {chat_id}")
+                logger.warning(f"Пользователь {user_id} не является администратором в чате {chat_id}")
                 return False
         except Forbidden:
             await update.message.reply_text(
                 "Ошибка: Боту не хватает прав для проверки вашего статуса. Пожалуйста, убедитесь, что бот является администратором."
             )
-            logger.error(
-                f"Ошибка проверки статуса пользователя {user_id} в чате {chat_id}")
+            logger.error(f"Ошибка проверки статуса пользователя {user_id} в чате {chat_id}")
             return False
 
     return True
-
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Обрабатывает команду /start для инициализации бота."""
@@ -156,7 +145,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
     await update.message.reply_text(welcome_message)
 
-
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Обрабатывает команду /help для отображения списка команд."""
     chat_id = update.effective_chat.id
@@ -174,7 +162,6 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         "- /help: Просмотрите список доступных команд."
     )
 
-
 async def set_schedule(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Обрабатывает команду /set для настройки периодичности отправки новостей."""
     chat_id = update.effective_chat.id
@@ -188,7 +175,6 @@ async def set_schedule(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         "Выберите периодичность отправки новостей:",
         reply_markup=get_periodicity_keyboard()
     )
-
 
 async def handle_periodicity_choice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Обрабатывает выбор периодичности через инлайн-клавиатуру."""
@@ -224,8 +210,7 @@ async def handle_periodicity_choice(update: Update, context: ContextTypes.DEFAUL
             data=chat_id
         )
         context.chat_data[chat_id] = job
-        logger.info(
-            f"Установлено расписание для чата {chat_id}: каждый {display_text}")
+        logger.info(f"Установлено расписание для чата {chat_id}: каждый {display_text}")
 
     elif callback_data == "period_custom_minutes":
         context.user_data["state"] = STATE_WAITING_MINUTES
@@ -239,11 +224,9 @@ async def handle_periodicity_choice(update: Update, context: ContextTypes.DEFAUL
     # Удаляем сообщение с клавиатурой
     try:
         await context.bot.delete_message(chat_id=chat_id, message_id=message_id)
-        logger.info(
-            f"Сообщение с клавиатурой (ID: {message_id}) удалено в чате {chat_id}")
+        logger.info(f"Сообщение с клавиатурой (ID: {message_id}) удалено в чате {chat_id}")
     except Exception as e:
         logger.error(f"Ошибка при удалении сообщения в чате {chat_id}: {e}")
-
 
 async def handle_custom_periodicity(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Обрабатывает пользовательский ввод периодичности (минуты или дни)."""
@@ -266,16 +249,14 @@ async def handle_custom_periodicity(update: Update, context: ContextTypes.DEFAUL
         minutes = value
         if minutes <= 0:
             await update.message.reply_text("Число минут должно быть больше 0.")
-            logger.warning(
-                f"Некорректное число минут в чате {chat_id}: {value}")
+            logger.warning(f"Некорректное число минут в чате {chat_id}: {value}")
             return
         display_text = f"{value} {'минута' if value == 1 else 'минуты' if 2 <= value % 10 <= 4 and (value % 100 < 10 or value % 100 > 20) else 'минут'}"
     elif state == STATE_WAITING_DAYS:
         minutes = value * 24 * 60
         if minutes <= 0:
             await update.message.reply_text("Число дней должно быть больше 0.")
-            logger.warning(
-                f"Некорректное число дней в чате {chat_id}: {value}")
+            logger.warning(f"Некорректное число дней в чате {chat_id}: {value}")
             return
         display_text = f"{value} {'день' if value == 1 else 'дня' if 2 <= value % 10 <= 4 and (value % 100 < 10 or value % 100 > 20) else 'дней'}"
     else:
@@ -300,11 +281,9 @@ async def handle_custom_periodicity(update: Update, context: ContextTypes.DEFAUL
         data=chat_id
     )
     context.chat_data[chat_id] = job
-    logger.info(
-        f"Установлено расписание для чата {chat_id}: каждые {display_text}")
+    logger.info(f"Установлено расписание для чата {chat_id}: каждые {display_text}")
 
     context.user_data.pop("state", None)
-
 
 async def send_news_summary(context: ContextTypes.DEFAULT_TYPE) -> None:
     """Отправляет сводку новостей в указанный чат."""
@@ -317,8 +296,7 @@ async def send_news_summary(context: ContextTypes.DEFAULT_TYPE) -> None:
         if chat_id in chat_schedules:
             chat_schedules[chat_id]["last_sent"] = datetime.now()
     except Forbidden:
-        logger.error(
-            f"Ошибка: Бот не имеет прав для отправки сообщений в чат {chat_id}")
+        logger.error(f"Ошибка: Бот не имеет прав для отправки сообщений в чат {chat_id}")
         if chat_id in context.chat_data:
             context.chat_data[chat_id].schedule_removal()
             del context.chat_data[chat_id]
@@ -326,13 +304,12 @@ async def send_news_summary(context: ContextTypes.DEFAULT_TYPE) -> None:
     except Exception as e:
         logger.error(f"Ошибка отправки сообщения в чат {chat_id}: {e}")
 
-
 def get_summary(prompt) -> str:
     """Генерирует сводку новостей с помощью модели T5."""
     input_ids = tokenizer.encode(prompt, return_tensors="pt").to(device)
     outputs = model.generate(
         input_ids,
-        max_new_tokens=1000,
+        max_new_tokens=3000,
         min_new_tokens=50,
         num_beams=5,
         early_stopping=True,
@@ -342,9 +319,8 @@ def get_summary(prompt) -> str:
     )
     return tokenizer.decode(outputs[0], skip_special_tokens=True)
 
-
 def get_news_summary(chat_id: int) -> str:
-    """Получает и суммирует новости за заданный пользователем интервал, исключая обработанные."""
+    """Получает и суммирует новости, в первый раз все последние, затем только новые."""
     db_path = "database/bee.db"
     try:
         conn = sqlite3.connect(db_path)
@@ -355,43 +331,48 @@ def get_news_summary(chat_id: int) -> str:
         minutes = schedule.get("minutes", 60)  # По умолчанию 60 минут
         last_sent = schedule.get("last_sent")
 
-        # Определяем временной порог
-        if last_sent is None:
-            # Для первой отправки берем новости за последние 24 часа
-            freshness_threshold = datetime.now() - timedelta(hours=24)
-        else:
-            # Для последующих отправок берем новости с момента последней отправки
-            freshness_threshold = last_sent
-
         # Получаем список уже обработанных новостей
         cursor.execute("SELECT news_id FROM processed_news")
         processed_ids = {row[0] for row in cursor.fetchall()}
 
-        # Выбираем свежие новости, которые еще не были обработаны
-        cursor.execute(
-            """
-            SELECT id, title, content, channel 
-            FROM news 
-            WHERE pub_date >= ? 
-            ORDER BY pub_date DESC
-            LIMIT 7
-            """,
-            (freshness_threshold.strftime('%Y-%m-%d %H:%M:%S'),)
-        )
-        news_items = cursor.fetchall()
+        if last_sent is None:
+            # Для первой отправки берем до 7 последних необработанных новостей
+            cursor.execute(
+                """
+                SELECT id, title, content, channel 
+                FROM news 
+                WHERE id NOT IN (SELECT news_id FROM processed_news)
+                ORDER BY pub_date DESC
+                LIMIT 7
+                """
+            )
+            news_items = cursor.fetchall()
+            is_first_run = True
+        else:
+            # Для последующих отправок берем новости с момента последней отправки
+            cursor.execute(
+                """
+                SELECT id, title, content, channel 
+                FROM news 
+                WHERE pub_date >= ? AND id NOT IN (SELECT news_id FROM processed_news)
+                ORDER BY pub_date DESC
+                LIMIT 7
+                """,
+                (last_sent.strftime('%Y-%m-%d %H:%M:%S'),)
+            )
+            news_items = cursor.fetchall()
+            is_first_run = False
 
-        # Фильтруем новости, исключая уже обработанные
-        fresh_news = [item for item in news_items if item[0]
-                      not in processed_ids]
+        # Фильтруем новости, исключая уже обработанные (на случай ошибки в SQL)
+        fresh_news = [item for item in news_items if item[0] not in processed_ids]
 
         if not fresh_news:
-            logger.info(f"Нет свежих новостей для чата {chat_id}")
-            return "На данный момент нет свежих экономических новостей."
+            message = "На данный момент нет новых экономических новостей." if not is_first_run else "В базе данных отсутствуют доступные новости."
+            logger.info(f"{message} для чата {chat_id}")
+            return message
 
         # Формируем промпт для суммаризации
-        prompt = (
-            "Суммаризируй следующие экономические новости"
-        )
+        prompt = "Суммаризируй следующие экономические новости"
         for news_id, title, content, source in fresh_news:
             prompt += f"Заголовок: {title}\nИсточник: {source}\nТекст: {content[:500]}\n\n"
 
@@ -409,10 +390,8 @@ def get_news_summary(chat_id: int) -> str:
         return f"📈 Экономическая сводка:\n\n{summary}\n\nСписок источников: {', '.join(set(item[3] for item in fresh_news))}"
 
     except Exception as e:
-        logger.error(
-            f"Ошибка при генерации сводки новостей для чата {chat_id}: {e}")
+        logger.error(f"Ошибка при генерации сводки новостей для чата {chat_id}: {e}")
         return "Произошла ошибка при подготовке экономической сводки. Пожалуйста, попробуйте позже."
-
 
 async def stop(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Обрабатывает команду /stop для остановки отправки новостей в текущем чате."""
@@ -425,8 +404,7 @@ async def stop(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
     if chat_id not in chat_schedules:
         await update.message.reply_text("В этом чате не настроена отправка новостей.")
-        logger.info(
-            f"Попытка остановки в чате {chat_id}, но расписание не найдено")
+        logger.info(f"Попытка остановки в чате {chat_id}, но расписание не найдено")
         return
 
     if chat_id in context.chat_data:
@@ -439,7 +417,6 @@ async def stop(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text(
         "Отправка новостных сводок в этом чате остановлена. Используйте /set для настройки нового расписания."
     )
-
 
 def main() -> None:
     """Инициализирует и запускает бота."""
@@ -474,12 +451,10 @@ def main() -> None:
     application.add_handler(CommandHandler("set", set_schedule))
     application.add_handler(CommandHandler("stop", stop))
     application.add_handler(CallbackQueryHandler(handle_periodicity_choice))
-    application.add_handler(MessageHandler(
-        filters.Regex(r'^\d+$'), handle_custom_periodicity))
+    application.add_handler(MessageHandler(filters.Regex(r'^\d+$'), handle_custom_periodicity))
 
     logger.info("----------------------- Бот запущен -----------------------")
     application.run_polling(allowed_updates=Update.ALL_TYPES)
-
 
 if __name__ == '__main__':
     main()
