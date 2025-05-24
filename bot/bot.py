@@ -1,4 +1,3 @@
-from database.creator import update_db
 import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, MessageHandler, filters, ContextTypes
@@ -16,6 +15,7 @@ from datetime import datetime, timedelta
 
 # Добавляем родительскую директорию в системный путь для импорта модуля базы данных
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from database.creator import update_db
 
 # Инициализация модели T5 для суммаризации новостей
 tokenizer = GPT2Tokenizer.from_pretrained(
@@ -36,12 +36,32 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Хранилище расписаний чатов (периодичность в минутах и текст для отображения)
+# Хранилище расписаний чатов (периодичность в минутах, текст для отображения, время последней отправки)
 chat_schedules = {}
 
 # Константы для состояний ввода пользователя
 STATE_WAITING_MINUTES = "waiting_minutes"
 STATE_WAITING_DAYS = "waiting_days"
+
+
+def init_processed_news_table():
+    """Инициализирует таблицу processed_news в базе данных."""
+    db_path = "database/bee.db"
+    try:
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS processed_news (
+                news_id INTEGER PRIMARY KEY,
+                processed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        conn.commit()
+        logger.info("Таблица processed_news инициализирована")
+    except Exception as e:
+        logger.error(f"Ошибка при инициализации таблицы processed_news: {e}")
+    finally:
+        conn.close()
 
 
 def get_periodicity_keyboard() -> InlineKeyboardMarkup:
@@ -187,7 +207,11 @@ async def handle_periodicity_choice(update: Update, context: ContextTypes.DEFAUL
 
     if callback_data in periodicity_map:
         minutes, display_text = periodicity_map[callback_data]
-        chat_schedules[chat_id] = {"minutes": minutes, "display": display_text}
+        chat_schedules[chat_id] = {
+            "minutes": minutes,
+            "display": display_text,
+            "last_sent": None  # Инициализируем как None для первой отправки
+        }
         await query.message.reply_text(f"Установлена периодичность: каждый {display_text}.")
 
         if chat_id in context.chat_data:
@@ -259,7 +283,11 @@ async def handle_custom_periodicity(update: Update, context: ContextTypes.DEFAUL
         logger.error(f"Неизвестное состояние в чате {chat_id}")
         return
 
-    chat_schedules[chat_id] = {"minutes": minutes, "display": display_text}
+    chat_schedules[chat_id] = {
+        "minutes": minutes,
+        "display": display_text,
+        "last_sent": None  # Инициализируем как None для первой отправки
+    }
     await update.message.reply_text(f"Установлена периодичность: каждые {display_text}.")
 
     if chat_id in context.chat_data:
@@ -281,10 +309,13 @@ async def handle_custom_periodicity(update: Update, context: ContextTypes.DEFAUL
 async def send_news_summary(context: ContextTypes.DEFAULT_TYPE) -> None:
     """Отправляет сводку новостей в указанный чат."""
     chat_id = context.job.data
-    news_summary = get_news_summary()
+    news_summary = get_news_summary(chat_id)
     try:
         await context.bot.send_message(chat_id=chat_id, text=news_summary)
         logger.info(f"Отправлена сводка новостей в чат {chat_id}")
+        # Обновляем время последней отправки после успешной отправки
+        if chat_id in chat_schedules:
+            chat_schedules[chat_id]["last_sent"] = datetime.now()
     except Forbidden:
         logger.error(
             f"Ошибка: Бот не имеет прав для отправки сообщений в чат {chat_id}")
@@ -312,40 +343,74 @@ def get_summary(prompt) -> str:
     return tokenizer.decode(outputs[0], skip_special_tokens=True)
 
 
-def get_news_summary() -> str:
-    """Получает и суммирует последние новости из базы данных."""
+def get_news_summary(chat_id: int) -> str:
+    """Получает и суммирует новости за заданный пользователем интервал, исключая обработанные."""
     db_path = "database/bee.db"
     try:
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
-        yesterday = datetime.now() - timedelta(days=1)
+
+        # Получаем настройки чата
+        schedule = chat_schedules.get(chat_id, {})
+        minutes = schedule.get("minutes", 60)  # По умолчанию 60 минут
+        last_sent = schedule.get("last_sent")
+
+        # Определяем временной порог
+        if last_sent is None:
+            # Для первой отправки берем новости за последние 24 часа
+            freshness_threshold = datetime.now() - timedelta(hours=24)
+        else:
+            # Для последующих отправок берем новости с момента последней отправки
+            freshness_threshold = last_sent
+
+        # Получаем список уже обработанных новостей
+        cursor.execute("SELECT news_id FROM processed_news")
+        processed_ids = {row[0] for row in cursor.fetchall()}
+
+        # Выбираем свежие новости, которые еще не были обработаны
         cursor.execute(
             """
-            SELECT title, content, channel 
+            SELECT id, title, content, channel 
             FROM news 
             WHERE pub_date >= ? 
-            ORDER BY PUB_DATE DESC
+            ORDER BY pub_date DESC
             LIMIT 7
             """,
-            (yesterday.strftime('%Y-%m-%d %H:%M:%S'),)
+            (freshness_threshold.strftime('%Y-%m-%d %H:%M:%S'),)
         )
         news_items = cursor.fetchall()
-        conn.close()
 
-        if not news_items:
+        # Фильтруем новости, исключая уже обработанные
+        fresh_news = [item for item in news_items if item[0]
+                      not in processed_ids]
+
+        if not fresh_news:
+            logger.info(f"Нет свежих новостей для чата {chat_id}")
             return "На данный момент нет свежих экономических новостей."
 
+        # Формируем промпт для суммаризации
         prompt = (
             "Суммаризируй следующие экономические новости в виде нумерованного списка."
         )
-        for title, content, source in news_items:
+        for news_id, title, content, source in fresh_news:
             prompt += f"Заголовок: {title}\nИсточник: {source}\nТекст: {content[:500]}\n\n"
 
         summary = get_summary(prompt)
-        return f"📈 Экономическая сводка:\n\n{summary}\n\nСписок источников: {', '.join(set(item[2] for item in news_items))}"
+
+        # Добавляем новости в таблицу processed_news
+        for news_id, _, _, _ in fresh_news:
+            cursor.execute(
+                "INSERT OR IGNORE INTO processed_news (news_id, processed_at) VALUES (?, ?)",
+                (news_id, datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+            )
+        conn.commit()
+
+        conn.close()
+        return f"📈 Экономическая сводка:\n\n{summary}\n\nСписок источников: {', '.join(set(item[3] for item in fresh_news))}"
 
     except Exception as e:
-        logger.error(f"Ошибка при генерации сводки новостей: {e}")
+        logger.error(
+            f"Ошибка при генерации сводки новостей для чата {chat_id}: {e}")
         return "Произошла ошибка при подготовке экономической сводки. Пожалуйста, попробуйте позже."
 
 
@@ -381,6 +446,9 @@ def main() -> None:
     if not BOT_TOKEN:
         logger.critical("BOT_TOKEN не найден в .env файле")
         return
+
+    # Инициализируем таблицу processed_news
+    init_processed_news_table()
 
     application = Application.builder().token(BOT_TOKEN).build()
 
