@@ -1,4 +1,3 @@
-from database.creator import update_db
 import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, MessageHandler, filters, ContextTypes
@@ -16,6 +15,8 @@ from datetime import datetime, timedelta
 
 # Добавляем родительскую директорию в системный путь для импорта модуля базы данных
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from database.creator import update_db
+
 
 # Инициализация модели T5 для суммаризации новостей
 tokenizer = GPT2Tokenizer.from_pretrained(
